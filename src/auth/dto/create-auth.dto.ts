@@ -4,7 +4,7 @@ import { IsNotEmpty } from "class-validator";
 export class CreateAuthDto {
     @ApiResponseProperty()
     @IsNotEmpty()
-    readonly emaill:string;
+    readonly email:string;
     @ApiResponseProperty()
     @IsNotEmpty()
     readonly password:string;

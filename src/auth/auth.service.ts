@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 import { UserService } from 'src/user/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { CreateUserDto } from 'src/user/dto/create-user.dto';
+import * as argon2 from 'argon2';
 
 @Injectable()
 export class AuthService {
@@ -29,23 +31,32 @@ export class AuthService {
     ])
     return{accessToken, refreshToken}
   }
-  create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
+  async register (creatUserDto: CreateUserDto):Promise<any>{
+    const UserExist = await this.userservice.findByEmail(creatUserDto.email)
+    if(UserExist){
+      throw new BadRequestException("User already exist")
+    }
+    const hashPass = await argon2.hash(creatUserDto.password)
+    const newUser = await this.userservice.create({ ...creatUserDto, password:hashPass})
+    return {message:"User created succssfuly", user:newUser}
   }
+  async login(createAuthDto: CreateAuthDto):Promise<any>{
+    const UserExist = await this.userservice.findByEmail(createAuthDto.email)
+    if(!UserExist){
+      throw new BadRequestException("User not found")
 
-  findAll() {
-    return `This action returns all auth`;
+    }else{
+      const passwordMatch = await argon2.verify(UserExist.password, createAuthDto.password)
+      if(!passwordMatch){
+        throw new BadRequestException("Failed to connect")
+      }else{
+        const token = await this.generateTokens(UserExist._id, UserExist.email ,UserExist.role)
+        return {UserExist, token}
+      }
+    }
   }
-
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
+  async logout(userId: string){
+    await this.userservice.update(userId,{refreshToken:null})
   }
-
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
-  }
+  
 }

@@ -48,4 +48,7 @@ export class UserService {
       return("User deleted")
     }
   }
+  async findByEmail(email: string): Promise<Iuser| null>{
+    return this.userModel.findOne({email}).exec()
+  }
 }
